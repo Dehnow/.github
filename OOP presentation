@@ -1,0 +1,206 @@
+#include <iostream>
+#include <fstream>
+#include <string>
+#include <stdexcept>
+
+using namespace std;
+
+// Base class definition (assuming Account class is defined here, truncated for brevity)
+class Account {
+protected:
+    string name, identityNumber, email, phoneNumber, kraPin;
+    double balance;
+
+public:
+    Account(string name, string id, string email, string phone, string kraPin)
+        : name(name), identityNumber(id), email(email), phoneNumber(phone), kraPin(kraPin), balance(0.0) {}
+
+    virtual void deposit(double amount) {
+        if (amount <= 0) throw invalid_argument("Deposit amount must be positive.");
+        balance += amount;
+        cout << "Amount deposited: " << amount << endl;
+    }
+
+    virtual void withdraw(double amount) {
+        if (amount <= 0) throw invalid_argument("Withdrawal amount must be positive.");
+        if (balance >= amount) {
+            balance -= amount;
+            cout << "Amount withdrawn: " << amount << ". Remaining balance: " << balance << endl;
+        } else {
+            cout << "Insufficient funds." << endl;
+        }
+    }
+
+    virtual void checkBalance() {
+        cout << "Current balance: " << balance << endl;
+        cout << "Would you like to perform a transaction? (1) Yes / (2) No: ";
+        int choice;
+        cin >> choice;
+        if (choice == 1) {
+            transactionDashboard();
+        } else {
+            cout << "Returning to main menu...\n";
+        }
+    }
+
+    void transactionDashboard() {
+        int transactionChoice;
+        cout << "\nTransaction Dashboard\n";
+        cout << "1. Send to Phone number\n";
+        cout << "2. Send to Bank\n";
+        cout << "3. Send to Other Account\n";
+        cout << "Choose your option: ";
+        cin >> transactionChoice;
+
+        switch(transactionChoice) {
+            case 1: {
+                string phoneNumber;
+                double amount;
+                cout << "Enter phone number to send money to: ";
+                cin >> phoneNumber;
+                cout << "Enter amount to send: ";
+                cin >> amount;
+                if (amount > 0 && amount <= balance) {
+                    balance -= amount;
+                    cout << "Transaction successful. Sent " << amount << " to phone number: " << phoneNumber << endl;
+                    cout << "Remaining balance: " << balance << endl;
+                } else {
+                    cout << "Insufficient balance for transaction.\n";
+                }
+                break;
+            }
+            case 2: {
+                string bankAccount;
+                double amount;
+                cout << "Enter bank account number to send money to: ";
+                cin >> bankAccount;
+                cout << "Enter amount to send: ";
+                cin >> amount;
+                if (amount > 0 && amount <= balance) {
+                    balance -= amount;
+                    cout << "Transaction successful. Sent " << amount << " to bank account: " << bankAccount << endl;
+                    cout << "Remaining balance: " << balance << endl;
+                } else {
+                    cout << "Insufficient balance for transaction.\n";
+                }
+                break;
+            }
+            case 3: {
+                string otherAccount;
+                double amount;
+                cout << "Enter account number to send money to: ";
+                cin >> otherAccount;
+                cout << "Enter amount to send: ";
+                cin >> amount;
+                if (amount > 0 && amount <= balance) {
+                    balance -= amount;
+                    cout << "Transaction successful. Sent " << amount << " to account: " << otherAccount << endl;
+                    cout << "Remaining balance: " << balance << endl;
+                } else {
+                    cout << "Insufficient balance for transaction.\n";
+                }
+                break;
+            }
+            default:
+                cout << "Invalid choice! Returning to the main menu.\n";
+                break;
+        }
+    }
+
+    virtual void saveToFile(ofstream &outFile) {
+        outFile << name << "\n" << identityNumber << "\n" << email << "\n" << phoneNumber << "\n" << kraPin << "\n" << balance << "\n";
+    }
+
+    static Account* loadFromFile(ifstream &inFile) {
+        string name, id, email, phone, kraPin;
+        double balance;
+        inFile >> name >> id >> email >> phone >> kraPin >> balance;
+        Account* newAccount = new Account(name, id, email, phone, kraPin);
+        newAccount->balance = balance;
+        return newAccount;
+    }
+
+    virtual ~Account() {}
+};
+
+// Menu function for interaction with the Account object
+void menu(Account*& account) {
+    int choice;
+    do {
+        cout << "\n1. Deposit\n2. Withdraw\n3. Check Balance\n4. Exit\nChoose option: ";
+        cin >> choice;
+        switch (choice) {
+            case 1: {
+                double amount;
+                cout << "Enter amount to deposit: ";
+                cin >> amount;
+                try {
+                    account->deposit(amount);
+                } catch (const exception& e) {
+                    cout << "Error: " << e.what() << endl;
+                }
+                break;
+            }
+            case 2: {
+                double amount;
+                account->checkBalance();
+                cout << "Enter amount to withdraw: ";
+                cin >> amount;
+                try {
+                    account->withdraw(amount);
+                } catch (const exception& e) {
+                    cout << "Error: " << e.what() << endl;
+                }
+                break;
+            }
+            case 3:
+                account->checkBalance();
+                break;
+            case 4:
+                cout << "Exiting program.\n";
+                break;
+            default:
+                cout << "Invalid option, please choose again.\n";
+        }
+    } while (choice != 4);
+}
+
+// The main function
+int main() {
+    string name, id, email, phone, kraPin;
+
+    // User prompts with name, identity, email, phone, and KRA PIN
+    cout << "Enter your name: ";
+    cin >> name;
+    cout << "Enter your Identity Number: ";
+    cin >> id;
+    cout << "Enter your email:\n";
+    cin.ignore();  // Clear the input buffer before calling getline
+    getline(cin, email);  // Use getline to input full email with spaces
+    cout << "Enter your phone number: ";
+    cin >> phone;
+    cout << "Enter your KRA pin: ";
+    cin >> kraPin;
+
+    // Create a new account using the information provided
+    Account* account = new Account(name, id, email, phone, kraPin); // As an example, no subclass since MobileBankAccount removed
+
+    menu(account);  // Start interacting with the account through the menu function
+
+    // Save account details to a file
+    ofstream outFile("account_data.txt", ios::app);
+    account->saveToFile(outFile);  // Save data to the file
+    outFile.close();  // Close the file
+
+    // Simulate loading the account from the saved file
+    ifstream inFile("account_data.txt");
+    if (inFile) {
+        Account* loadedAccount = Account::loadFromFile(inFile);
+        cout << "Loaded account balance: ";
+        loadedAccount->checkBalance();
+        delete loadedAccount; // Free the memory of loadedAccount
+    }
+
+    delete account;  // Free memory allocated for the original account
+    return 0;  // End of program
+}
